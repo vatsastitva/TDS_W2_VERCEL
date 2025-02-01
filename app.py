@@ -1,39 +1,73 @@
+# from fastapi import FastAPI
+# from fastapi.middleware.cors import CORSMiddleware
+# import json
+
+# app = FastAPI()
+
+# # Enable CORS
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"],  # Allow all origins
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+
+# # Load data from JSON file
+# with open("q-vercel-python.json", "r") as f:
+#     students_data = json.load(f)
+
+# students_dict = {student["name"]: student["marks"] for student in students_data}
+
+# @app.get("/api")
+# def get_marks(name: list[str]):
+#     marks = [students_dict.get(n, "Not Found") for n in name]
+#     return {"marks": marks}
+
+
+
+from flask import Flask, request, jsonify
+from fastapi.middleware.cors import CORSMiddleware, CORS
 import json
-from http.server import BaseHTTPRequestHandler
-import urllib.parse
-from flask.cors import CORS
-CORS(app)
-# Load student data from the JSON file
-def load_data():
-    with open('q-vercel-python.json', 'r') as file:
-        data = json.load(file)
-    return data
 
-# Handler class to process incoming requests
-class handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        # Parse the query parameters
-        query = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+# Initialize Flask app
+app = Flask(__name__)
 
-        # Get 'name' parameters from the query string
-        names = query.get('name', [])
+# # Enable CORS
+# CORS(app)
 
-        # Load data from the JSON file
-        data = load_data()
+# Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-        # Prepare the result dictionary
-        result = {"marks": []}
-        for name in names:
-            # Find the marks for each name
-            for entry in data:
-                if entry["name"] == name:
-                    result["marks"].append(entry["marks"])
+with open("q-vercel-python.json", "r") as f:
+    students_data = json.load(f)
 
-        # Send the response header
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')  # Enable CORS for any origin
-        self.end_headers()
+students_marks = {student["name"]: student["marks"] for student in students_data}
 
-        # Send the JSON response
-        self.wfile.write(json.dumps(result).encode('utf-8'))
+
+@app.route("/api", methods=["GET"])
+def get_marks():
+    # Extract the names from query parameters
+    names = request.args.getlist('name')
+
+    if not names:
+        return jsonify({"error": "No student names provided."}), 400
+
+    marks = []
+    for name in names:
+        mark = students_marks.get(name)
+        if mark is None:
+            marks.append({"name": name, "error": "Not Found"})
+        else:
+            marks.append({"name": name, "marks": mark})
+
+    return jsonify({"marks": marks})
+
+if __name__ == "__main__":
+    app.run(debug=True)
