@@ -1,7 +1,8 @@
 import json
 from http.server import BaseHTTPRequestHandler
 import urllib.parse
-
+from flask.cors import CORS
+CORS(app)
 # Load student data from the JSON file
 def load_data():
     with open('q-vercel-python.json', 'r') as file:
